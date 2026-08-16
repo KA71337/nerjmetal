@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# production
+build/
+dist/
+
+# local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# logs and debug artifacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+shop-debug.html
+special-debug.html
+shop-chunk.js
+shop-graphql.json
+shop-module.txt
+shop-next.json
+special-next.json
+r.text())
+{console.error(e)
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

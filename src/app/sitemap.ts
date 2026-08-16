@@ -1,0 +1,1 @@
+import type {MetadataRoute} from "next";import {getSeedProducts} from "@/lib/products";export default function sitemap():MetadataRoute.Sitemap{const root="https://nerjmetal.az";return [{url:root,priority:1},{url:`${root}/catalog`,priority:.9},...getSeedProducts().map(p=>({url:`${root}/catalog/${p.slug}`,priority:.7}))]}
