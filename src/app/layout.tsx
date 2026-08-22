@@ -1,19 +1,129 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Archivo } from "next/font/google";
 import "./globals.css";
+import "./styles/premium.css";
 import { AppProviders } from "@/components/app-providers";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
+import { site } from "@/lib/site";
+import { jsonLdScript } from "@/lib/json-ld";
 
-const siteUrl = "https://nerjmetal.az";
+/**
+ * Archivo carries the full latin-ext range (ə Ə ğ Ğ ı İ ş Ş ç Ç ö ü) at every weight up to 900,
+ * so Azerbaijani copy renders with real glyphs instead of fallback boxes.
+ */
+const archivo = Archivo({
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  variable: "--font-archivo",
+});
+
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: { default: "NERJ METAL — Paslanmayan polad həlləri", template: "%s — NERJ METAL" },
-  description: "Tikinti, sənaye, qida və kimyəvi sektorlar üçün paslanmayan polad həlləri.",
+  metadataBase: new URL(site.url),
+  title: { default: `${site.name} — ${site.tagline}`, template: `%s — ${site.name}` },
+  description: site.description,
+  applicationName: site.name,
+  keywords: [
+    "paslanmayan polad",
+    "nerj metal",
+    "metal Bakı",
+    "polad boru",
+    "316 polad",
+    "metal konstruksiya",
+    "hovuz şəlaləsi",
+    "sənaye avadanlığı",
+  ],
+  authors: [{ name: site.name, url: site.url }],
+  creator: site.name,
+  publisher: site.name,
+  category: "business",
   alternates: { canonical: "/" },
-  openGraph: { title: "NERJ METAL", description: "15+ illik metal təcrübəsi.", url: siteUrl, siteName: "NERJ METAL", locale: "az_AZ", type: "website" },
-  robots: { index: true, follow: true },
+  manifest: "/manifest.webmanifest",
+  formatDetection: { telephone: true, address: false, email: false },
+  openGraph: {
+    type: "website",
+    siteName: site.name,
+    title: `${site.name} — ${site.tagline}`,
+    description: site.description,
+    url: site.url,
+    locale: site.locale,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${site.name} — ${site.tagline}`,
+    description: site.description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  colorScheme: "dark",
+  themeColor: "#080a0b",
+};
+
+const graph = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["Organization", "LocalBusiness"],
+      "@id": `${site.url}/#organization`,
+      name: site.name,
+      url: site.url,
+      logo: `${site.url}${site.logo}`,
+      image: `${site.url}${site.logo}`,
+      description: site.description,
+      telephone: site.phone,
+      priceRange: "$$",
+      areaServed: "AZ",
+      geo: { "@type": "GeoCoordinates", latitude: site.geo.lat, longitude: site.geo.lng },
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: site.address.street,
+        addressLocality: site.address.city,
+        addressRegion: site.address.district,
+        postalCode: site.address.postalCode,
+        addressCountry: site.address.country,
+      },
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${site.url}/#website`,
+      url: site.url,
+      name: site.name,
+      inLanguage: site.lang,
+      publisher: { "@id": `${site.url}/#organization` },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: { "@type": "EntryPoint", urlTemplate: `${site.url}/catalog?q={search_term_string}` },
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const organization = { "@context":"https://schema.org", "@type":"Organization", name:"NERJ METAL", url:siteUrl, logo:`${siteUrl}/brand/nerj-metal-official-logo.jpg`, telephone:"+994708440664", geo:{"@type":"GeoCoordinates",latitude:40.4265337,longitude:49.8868771}, address:{ "@type":"PostalAddress", streetAddress:"Ziya Bünyadov prospekti, 112", addressLocality:"Bakı", addressRegion:"Nərimanov rayonu", postalCode:"1033", addressCountry:"AZ" } };
-  return <html lang="az"><body><a href="#main" className="fixed left-3 top-3 z-[100] -translate-y-20 bg-[var(--acid)] p-3 text-black focus:translate-y-0">Məzmuna keç</a><AppProviders>{children}<MobileBottomNav /></AppProviders><script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(organization)}} /></body></html>;
+  return (
+    <html lang={site.lang} className={archivo.variable}>
+      <body>
+        <a href="#main" className="skip-link">
+          Məzmuna keç
+        </a>
+        <AppProviders>
+          <Header />
+          {children}
+          <Footer />
+          <MobileBottomNav />
+        </AppProviders>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(graph) }} />
+      </body>
+    </html>
+  );
 }

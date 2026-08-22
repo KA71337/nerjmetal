@@ -1,1 +1,43 @@
-"use client";import {Header} from "@/components/header";import {Footer} from "@/components/footer";import {ProductCard} from "@/components/product-card";import {useStore} from "@/components/app-providers";import seed from "@/data/products.json";import type {Product} from "@/types";export default function Favorites(){const s=useStore(),all=s.products.length?s.products:seed as Product[],items=all.filter(p=>s.favorites.includes(p.id));return <><Header/><main id="main" className="container-wide min-h-screen pb-24 pt-36"><p className="eyebrow">Sizin seçiminiz</p><h1 className="mt-4 text-5xl font-black uppercase md:text-8xl">Seçilmişlər</h1><div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{items.map(p=><ProductCard key={p.id} product={p}/>)}</div>{!items.length&&<p className="panel mt-12 p-10 text-white/50">Hələ seçilmiş məhsul yoxdur.</p>}</main><Footer/></>}
+"use client";
+
+import Link from "next/link";
+import { Heart } from "lucide-react";
+import { ProductCard } from "@/components/product-card";
+import { useStore } from "@/components/app-providers";
+import seed from "@/data/products.json";
+import type { Product } from "@/types";
+
+export default function Favorites() {
+  const store = useStore();
+  const all = store.products.length ? store.products : (seed as Product[]);
+  const items = all.filter((product) => store.favorites.includes(product.id));
+
+  return (
+    <main id="main" className="container-wide min-h-screen pb-24 pt-32 md:pt-40">
+      <header className="catalog-head">
+        <p className="eyebrow">Sizin seçiminiz</p>
+        <h1>Seçilmişlər</h1>
+        <p className="catalog-lede">
+          Seçilmiş məhsullar bu brauzerdə saxlanılır. Sifariş üçün onları səbətə əlavə edin.
+        </p>
+      </header>
+
+      {items.length > 0 ? (
+        <div className="product-grid mt-12">
+          {items.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <div className="cat-empty mt-12">
+          <Heart size={26} className="text-[var(--acid)]" />
+          <h3>Hələ seçilmiş məhsul yoxdur</h3>
+          <p>Kataloqda ürək işarəsinə toxunaraq məhsulları buraya əlavə edin.</p>
+          <Link href="/catalog" className="btn btn-acid">
+            Kataloqa keç
+          </Link>
+        </div>
+      )}
+    </main>
+  );
+}

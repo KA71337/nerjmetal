@@ -26,8 +26,9 @@ shop-graphql.json
 shop-module.txt
 shop-next.json
 special-next.json
-r.text())
-{console.error(e)
+
+# scraper scratch output
+tmp-chunks/
 
 # OS / editors
 .DS_Store
