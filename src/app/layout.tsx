@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Archivo } from "next/font/google";
 import "./globals.css";
 import "./styles/premium.css";
@@ -123,6 +124,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <MobileBottomNav />
         </AppProviders>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(graph) }} />
+        {/* Google AdSense loader — afterInteractive keeps it out of the critical path. */}
+        <Script
+          id="adsense-loader"
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3346958542678383"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

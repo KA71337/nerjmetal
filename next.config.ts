@@ -9,18 +9,20 @@ const isProd = process.env.NODE_ENV === "production";
  *   render dynamically, so the JSON-LD payloads are escaped in src/lib/json-ld.ts instead.
  * - 'unsafe-eval' is only added outside production, where React Fast Refresh needs it.
  * - OpenStreetMap tiles are the only third-party image source (Leaflet map).
+ * - googlesyndication/doubleclick origins serve the Google AdSense loader, ad frames and
+ *   measurement pings (see the adsense-loader Script in src/app/layout.tsx).
  */
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
+  `script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com${isProd ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org",
+  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://*.googlesyndication.com https://*.doubleclick.net",
   "media-src 'self'",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' https://pagead2.googlesyndication.com https://*.googlesyndication.com https://googleads.g.doubleclick.net",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
-  "frame-src 'none'",
+  "frame-src https://googleads.g.doubleclick.net https://*.googlesyndication.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
