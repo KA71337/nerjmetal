@@ -1,128 +1,67 @@
-"use client";
+import type { Metadata } from "next";
+import { getSeedProducts } from "@/lib/products";
+import { decodeOrder } from "@/lib/order-payload";
+import { site } from "@/lib/site";
+import { OrderClient } from "@/components/order-client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Check, Copy, MessageCircle } from "lucide-react";
-import { useStore } from "@/components/app-providers";
+type SearchParams = Promise<{ items?: string | string[] }>;
 
-type Shared = { title: string; quantity: number };
-
-const encode = (value: string) => {
-  const bytes = new TextEncoder().encode(value);
-  let binary = "";
-  bytes.forEach((byte) => (binary += String.fromCharCode(byte)));
-  return btoa(binary);
-};
-
-/** Decodes a shared request payload defensively — anything unexpected is discarded. */
-function decode(raw: string | null): Shared[] {
-  if (!raw) return [];
-  try {
-    const binary = atob(raw);
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
-      .map((item) => ({
-        title: String(item.title ?? "").slice(0, 160),
-        quantity: Math.min(999, Math.max(1, Math.floor(Number(item.quantity) || 1))),
-      }))
-      .filter((item) => item.title.length > 0)
-      .slice(0, 60);
-  } catch {
-    return [];
-  }
+/** Resolves a decoded payload against the committed catalog. */
+function resolveItems(raw?: string) {
+  const items = decodeOrder(raw);
+  if (!items.length) return { items, products: [] };
+  const seed = getSeedProducts();
+  const seen = new Set<string>();
+  const products = items
+    .map((item) => {
+      const match =
+        (item.id && seed.find((product) => product.id === item.id)) ||
+        seed.find((product) => product.title.toLocaleLowerCase("az") === item.title.toLocaleLowerCase("az"));
+      return match;
+    })
+    .filter((product): product is NonNullable<typeof product> => !!product)
+    .filter((product) => {
+      if (seen.has(product.id)) return false;
+      seen.add(product.id);
+      return true;
+    });
+  return { items, products };
 }
 
-function OrderView() {
-  const { cart } = useStore();
-  const params = useSearchParams();
-  const [copied, setCopied] = useState<"link" | "text" | null>(null);
-  const [origin, setOrigin] = useState("");
-  const shared = useMemo(() => decode(params.get("items")), [params]);
-
-  useEffect(() => setOrigin(window.location.origin), []);
-  useEffect(() => {
-    if (!copied) return;
-    const id = setTimeout(() => setCopied(null), 1600);
-    return () => clearTimeout(id);
-  }, [copied]);
-
-  const rows: Shared[] = cart.length
-    ? cart.map((item) => ({ title: item.product.title, quantity: item.quantity }))
-    : shared;
-  const text = useMemo(
-    () =>
-      [
-        "NERJ METAL — məhsul sorğusu",
-        ...rows.map((row, index) => `${index + 1}. ${row.title} × ${row.quantity}`),
-        "",
-        "Zəhmət olmasa mövcudluq və şərtlər barədə məlumat verin.",
-      ].join("\n"),
-    [rows],
-  );
-  const link = origin && rows.length ? `${origin}/order?items=${encodeURIComponent(encode(JSON.stringify(rows)))}` : "";
-
-  async function copy(value: string, kind: "link" | "text") {
-    if (!value) return;
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(kind);
-    } catch {
-      setCopied(null);
-    }
-  }
-  return (
-    <main id="main" className="container-wide min-h-screen pb-24 pt-32 md:pt-40">
-      <header className="catalog-head">
-        <p className="eyebrow">Sifariş sorğusu</p>
-        <h1>Link yarat</h1>
-        <p className="catalog-lede">
-          Səbətinizi mətn və ya link kimi paylaşın. Link açıldıqda sorğudaki məhsullar göstərilir.
-        </p>
-      </header>
-
-      <div className="mt-12 grid gap-6 lg:grid-cols-2">
-        <section className="panel p-6">
-          <h2 className="text-xl font-bold">Məhsullar</h2>
-          <pre className="mt-5 whitespace-pre-wrap font-sans leading-relaxed text-white/65">
-            {rows.length ? text : "Səbət boşdur."}
-          </pre>
-        </section>
-        <section className="panel p-6">
-          <h2 className="text-xl font-bold">Paylaş</h2>
-          <p className="mt-3 text-sm text-white/50">
-            WhatsApp düyməsi telefon nömrəsi tələb etmədən paylaşma pəncərəsini açır.
-          </p>
-          <button type="button" disabled={!link} onClick={() => copy(link, "link")} className="btn mt-6 w-full">
-            {copied === "link" ? <Check size={17} /> : <Copy size={17} />}
-            {copied === "link" ? "Kopyalandı" : "Linki kopyala"}
-          </button>
-          <button type="button" disabled={!rows.length} onClick={() => copy(text, "text")} className="btn mt-3 w-full">
-            {copied === "text" ? <Check size={17} /> : <Copy size={17} />}
-            {copied === "text" ? "Kopyalandı" : "Mətni kopyala"}
-          </button>
-          {rows.length > 0 && (
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent(link ? `${text}\n\n${link}` : text)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-acid mt-3 w-full"
-            >
-              <MessageCircle size={17} /> WhatsApp ilə paylaş
-            </a>
-          )}
-        </section>
-      </div>
-    </main>
-  );
+/**
+ * Open Graph for shared order links: one product → its own photo; several
+ * products → the dynamic composite preview at /order/og?items=….
+ */
+export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
+  const { items: raw } = await searchParams;
+  const { items, products } = resolveItems(typeof raw === "string" ? raw : undefined);
+  const names = (items.length ? items : []).slice(0, 4).map((item) => item.title).join(", ");
+  const description = items.length
+    ? `${items.length} məhsul üçün sifariş sorğusu: ${names}${items.length > 4 ? "…" : ""}. NERJ METAL — paslanmayan polad həlləri.`
+    : "Səbətinizi məhsullarla paylaşın — NERJ METAL paslanmayan polad həlləri.";
+  const single = items.length === 1 ? products[0]?.images[0] : undefined;
+  const previewUrl = items.length
+    ? `${site.url}/order/og?items=${encodeURIComponent(typeof raw === "string" ? raw : "")}`
+    : `${site.url}/opengraph-image`;
+  return {
+    title: "Sifariş sorğusu",
+    description,
+    alternates: { canonical: "/order" },
+    robots: { index: false, follow: true },
+    openGraph: {
+      type: "website",
+      url: `${site.url}/order`,
+      title: "NERJ METAL — Sifariş sorğusu",
+      description,
+      siteName: site.name,
+      locale: site.locale,
+      images: [{ url: single ?? previewUrl }],
+    },
+    twitter: { card: "summary_large_image", title: "NERJ METAL — Sifariş sorğusu", description },
+  };
 }
 
-export default function Order() {
-  return (
-    <Suspense fallback={<main id="main" className="container-wide state-page">Yüklənir…</main>}>
-      <OrderView />
-    </Suspense>
-  );
+export default async function Order({ searchParams }: { searchParams: SearchParams }) {
+  const { items } = await searchParams;
+  return <OrderClient raw={typeof items === "string" ? items : undefined} />;
 }
