@@ -26,7 +26,6 @@ export function Footer() {
           <Link href="/favorites">Seçilmişlər</Link>
           <Link href="/#story">Haqqımızda</Link>
           <Link href="/#sectors">Sektorlar</Link>
-          <Link href="/admin">İdarəetmə</Link>
         </nav>
 
         <div className="footer-col">

@@ -1,7 +1,7 @@
 /** Central brand + site configuration. Single source of truth for SEO and contact data. */
 export const site = {
-  /** Set NEXT_PUBLIC_SITE_URL in Vercel once the nerjmetal.az domain is live. */
-  url: (process.env.NEXT_PUBLIC_SITE_URL || "https://nerjmetal.vercel.app").replace(/\/$/, ""),
+  /** Canonical origin. NEXT_PUBLIC_SITE_URL may override it, but must never point elsewhere. */
+  url: (process.env.NEXT_PUBLIC_SITE_URL || "https://nerjmetal.com").replace(/\/$/, ""),
   name: "NERJ METAL",
   legalName: "NERJ METAL",
   tagline: "Paslanmayan polad həlləri",

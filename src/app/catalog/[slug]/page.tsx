@@ -25,7 +25,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const product = getSeedProduct(slug);
   if (!product) return { title: "Məhsul tapılmadı", robots: { index: false, follow: true } };
-  const title = product.title;
+  /** Full standalone title (bypasses the layout template) with commercial category context. */
+  const title = product.category ? `${product.title} — ${product.category}` : product.title;
   const description = summarise(product);
   const images = product.images.slice(0, 3).map((url) => ({ url }));
   return {
