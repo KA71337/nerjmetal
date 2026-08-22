@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { githubConfig, putRemoteFile } from "@/lib/github-store";
+import { rateLimit, requestKey } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +26,10 @@ export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (origin && new URL(origin).host !== request.headers.get("host")) {
     return NextResponse.json({ error: "Cross-origin sorğu rədd edildi" }, { status: 403 });
+  }
+  /* Upload abuse brake: 12 files / 5 min per IP. */
+  if (!rateLimit(`upload:${requestKey(request)}`, { limit: 12, windowMs: 5 * 60_000 }).ok) {
+    return NextResponse.json({ error: "Yükləmə limiti dolub. Bir az sonra yenidən cəhd edin." }, { status: 429 });
   }
 
   let files: File[];

@@ -1,11 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getRemoteFile, githubConfig, putRemoteFile } from "@/lib/github-store";
 import { sanitiseCatalog, serializeCatalog } from "@/lib/product-schema";
+import { rateLimit, requestKey } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PRODUCTS_PATH = process.env.GITHUB_PRODUCTS_PATH || "src/data/products.json";
+
+/** Commit spam brake: 10 writes / 5 min per IP (admin UI needs only a few). */
+function writeLimited(request: NextRequest): boolean {
+  return rateLimit(`put:${requestKey(request)}`, { limit: 10, windowMs: 5 * 60_000 }).ok;
+}
 
 /** Same-origin enforcement for mutating requests (CSRF defence on top of SameSite=Lax). */
 function sameOrigin(request: NextRequest): boolean {
@@ -39,6 +45,9 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   if (!sameOrigin(request)) {
     return NextResponse.json({ error: "Cross-origin sorğu rədd edildi" }, { status: 403 });
+  }
+  if (!writeLimited(request)) {
+    return NextResponse.json({ error: "Çox tez-tez yadda saxlanılır. Bir az gözləyin." }, { status: 429 });
   }
   if (!githubConfig()) {
     return NextResponse.json({ error: "GitHub inteqrasiyası konfiqurasiya edilməyib" }, { status: 503 });

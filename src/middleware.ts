@@ -1,14 +1,38 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
+import { rateLimit, requestKey } from "@/lib/rate-limit";
 
 /**
- * Edge guard for the admin surface:
- * - `/admin` (except `/admin/login`) redirects anonymous visitors to the login screen;
- * - `/api/admin/*` (except `/api/admin/login`) answers 401 JSON instead.
+ * Edge guard for the whole site:
+ * - scanner/noise paths (.env, .git, wp-*, *.php …) are dropped instantly;
+ * - /api/* is throttled per IP (cheap DDoS/abuse brake at app level);
+ * - /admin and /api/admin/* additionally require a signed session cookie.
  */
+const SCANNER_PATTERN =
+  /^\/(?:\.env|\.git|\.svn|\.hg|\.aws|\.ssh|wp-(?:admin|content|login)|phpmyadmin|pma|xmlrpc\.php|adminer|\.well-known\/security\.txt$|vendor\/phpunit|cgi-bin|\.DS_Store|composer\.(?:json|lock)|web\.config|\.aspx?|\.php$)/i;
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  /* The login screen and the login endpoint itself must stay public. */
+
+  /* Drop vulnerability scanners before touching any app logic. */
+  if (SCANNER_PATTERN.test(pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  /* App-level throttle for API surfaces only — never for pages/assets,
+     so real users behind shared IPs are unaffected. */
+  if (pathname.startsWith("/api/")) {
+    const verdict = rateLimit(`api:${requestKey(request)}`, { limit: 30, windowMs: 60_000, lockoutMs: 60_000 });
+    if (!verdict.ok) {
+      return NextResponse.json(
+        { error: "Çox sorğu göndərildi" },
+        { status: 429, headers: { "Retry-After": String(verdict.retryAfterSec) } },
+      );
+    }
+  }
+
+  /* The login screen and the login endpoint itself must stay public
+     (the login route applies its own strict brute-force limiter). */
   if (pathname === "/admin/login" || pathname === "/api/admin/login") {
     return NextResponse.next();
   }
@@ -25,5 +49,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*", "/api/admin/:path*"],
+  matcher: [
+    /* Run on everything except static assets to keep the edge work minimal. */
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|manifest.webmanifest|robots.txt|sitemap.xml|brand/|media/|products/).*)",
+  ],
 };
