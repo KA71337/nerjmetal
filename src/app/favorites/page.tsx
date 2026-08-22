@@ -15,10 +15,9 @@ export default function Favorites() {
   return (
     <main id="main" className="container-wide min-h-screen pb-24 pt-32 md:pt-40">
       <header className="catalog-head">
-        <p className="eyebrow">Sizin seçiminiz</p>
-        <h1>Seçilmişlər</h1>
+        <p className="eyebrow">Sizin seçiminiz</p>        <h1>Favoritlər</h1>
         <p className="catalog-lede">
-          Seçilmiş məhsullar bu brauzerdə saxlanılır. Sifariş üçün onları səbətə əlavə edin.
+          Favorit kataloqda saxlanılır. Sifariş üçün «Seç» düyməsi ilə siyahıya əlavə edin və Link yarat düyməsini basın.
         </p>
       </header>
 

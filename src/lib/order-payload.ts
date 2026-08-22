@@ -1,10 +1,19 @@
 /**
- * Shared-order payload codec, dependency-free and isomorphic (server metadata +
- * client components). Format: base64url(JSON [{id?, title, quantity}, …]).
+ * Shared-order token codec, dependency-free and isomorphic.
+ *
+ * A selection becomes `base64url(JSON [["<productId>", qty], …])` used directly
+ * as the /order/<token> path segment. The URL therefore carries ONLY product
+ * IDs and quantities — never titles, images or secrets. Product data is always
+ * re-resolved server-side from the committed catalog, so photos/prices stay
+ * current and each link shows exactly its own items (no shared state).
  */
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
-export type OrderItem = { id?: string; title: string; quantity: number };
+export type SelectionEntry = { id: string; quantity: number };
+
+const MAX_ITEMS = 60;
+/** Catalog ids are numeric (tap.az legacy ids or admin Date.now ids). */
+const ID_PATTERN = /^\d{1,20}$/;
 
 function bytesToBase64Url(bytes: Uint8Array): string {
   let out = "";
@@ -39,40 +48,47 @@ function base64UrlToBytes(value: string): Uint8Array {
   return bytes.subarray(0, byteIndex);
 }
 
-/** Encodes selected products into a compact, URL-safe order payload. */
-export function encodeOrder(items: OrderItem[]): string {
-  const safeItems = items
-    .map((item) => ({
-      id: typeof item.id === "string" ? item.id.slice(0, 80) : undefined,
-      title: String(item.title ?? "").slice(0, 160),
-      quantity: Math.min(999, Math.max(1, Math.floor(Number(item.quantity) || 1))),
-    }))
-    .filter((item) => item.title || item.id)
-    .slice(0, 60);
-  return bytesToBase64Url(new TextEncoder().encode(JSON.stringify(safeItems)));
+/** Encodes a selection into a compact, URL-safe path token. Deduplicates ids. */
+export function encodeSelection(entries: SelectionEntry[]): string {
+  const map = new Map<string, number>();
+  for (const entry of entries.slice(0, MAX_ITEMS)) {
+    const id = String(entry?.id ?? "").trim();
+    const quantity = Math.min(999, Math.max(1, Math.floor(Number(entry?.quantity) || 1)));
+    if (!ID_PATTERN.test(id)) continue;
+    map.set(id, quantity);
+  }
+  return bytesToBase64Url(new TextEncoder().encode(JSON.stringify([...map])));
 }
 
-/** Defensive decode — legacy payloads (title-only) and junk input stay safe. */
-export function decodeOrder(raw: string | null | undefined): OrderItem[] {
-  if (!raw || raw.length > 4096) return [];
+/**
+ * Strict decode — malformed tokens, oversized payloads, non-numeric ids,
+ * quantities outside 1–999 and prototype-pollution keys are all rejected.
+ * Returns [] when anything is off so callers can render a safe empty state.
+ */
+export function decodeSelection(token: string | null | undefined): SelectionEntry[] {
+  if (!token || token.length > 2048) return [];
   try {
-    const parsed: unknown = JSON.parse(new TextDecoder().decode(base64UrlToBytes(raw)));
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
-      .map((item) => ({
-        id: typeof item.id === "string" && item.id ? item.id.slice(0, 80) : undefined,
-        title: String(item.title ?? "").slice(0, 160),
-        quantity: Math.min(999, Math.max(1, Math.floor(Number(item.quantity) || 1))),
-      }))
-      .filter((item) => item.title.length > 0 || item.id)
-      .slice(0, 60);
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(base64UrlToBytes(token)));
+    if (!Array.isArray(parsed) || parsed.length > MAX_ITEMS) return [];
+    const entries: SelectionEntry[] = [];
+    const seen = new Set<string>();
+    for (const pair of parsed) {
+      if (!Array.isArray(pair) || pair.length !== 2) continue;
+      const [id, quantity] = pair as unknown[];
+      if (typeof id !== "string" || !ID_PATTERN.test(id)) continue;
+      if (typeof quantity !== "number" || !Number.isFinite(quantity)) continue;
+      const safeQuantity = Math.min(999, Math.max(1, Math.floor(quantity)));
+      if (seen.has(id)) continue;
+      seen.add(id);
+      entries.push({ id, quantity: safeQuantity });
+    }
+    return entries;
   } catch {
     return [];
   }
 }
 
-/** Builds the canonical shareable URL for a set of order items. */
-export function orderLink(origin: string, items: OrderItem[]): string {
-  return `${origin.replace(/\/$/, "")}/order?items=${encodeURIComponent(encodeOrder(items))}`;
+/** Canonical shareable URL for a selection. */
+export function orderLink(origin: string, entries: SelectionEntry[]): string {
+  return `${origin.replace(/\/$/, "")}/order/${encodeSelection(entries)}`;
 }

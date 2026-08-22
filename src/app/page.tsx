@@ -115,7 +115,7 @@ export default function Home() {
               nəticəyə.
             </h2>
             <p className="mt-8 max-w-lg text-lg text-white/60">
-              Mövcud məhsulları kateqoriya üzrə araşdırın, seçilmişlərə və səbətə əlavə edin.
+              Mövcud məhsulları kateqoriya üzrə araşdırın, seçin və bir kliklə sifariş linki paylaşın.
             </p>
             <Link href="/catalog" className="btn mt-10">
               Kataloqu aç <ArrowUpRight size={17} />

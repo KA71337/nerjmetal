@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Heart, Phone, Plus } from "lucide-react";
+import { Check, Heart, Phone, Plus } from "lucide-react";
 import type { Product } from "@/types";
 import { ProductVisual } from "@/components/product-visual";
 import { useStore } from "@/components/app-providers";
@@ -26,6 +26,7 @@ export function ProductPageClient({ slug, seed }: { slug: string; seed?: Product
     );
 
   const liked = store.favorites.includes(product.id);
+  const selected = Boolean(store.selection[product.id]);
   const lines = (product.description || "").split("\n").filter(Boolean);
   const specs = lines.filter((line) => /^\s*[-•·]/.test(line)).slice(0, 10);
   const priceValue = Number((product.price || "").replace(/[^\d.]/g, "")) || 0;
@@ -109,8 +110,14 @@ export function ProductPageClient({ slug, seed }: { slug: string; seed?: Product
           </p>
 
           <div className="product-actions">
-            <button type="button" className="btn btn-acid" onClick={() => store.addToCart(product)}>
-              <Plus size={17} /> Səbətə əlavə et
+            <button
+              type="button"
+              className={`btn ${selected ? "" : "btn-acid"}`}
+              onClick={() => store.toggleSelect(product)}
+              aria-pressed={selected}
+            >
+              {selected ? <Check size={17} /> : <Plus size={17} />}
+              {selected ? "Seçildi ✓" : "Seç"}
             </button>
             <button
               type="button"
@@ -129,7 +136,7 @@ export function ProductPageClient({ slug, seed }: { slug: string; seed?: Product
             <h2>Təsvir</h2>
             <p>
               {product.description ||
-                "Ətraflı məlumat üçün məhsulu səbətə əlavə edin və sifariş sorğusu yaradın və ya birbaşa zəng edin."}
+                "Ətraflı məlumat üçün məhsulu seçin, Link yarat düyməsi ilə sorğu göndərin və ya birbaşa zəng edin."}
             </p>
           </div>
 

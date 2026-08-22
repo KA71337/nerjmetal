@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Heart, Menu, Phone, Search, ShoppingBag, X } from "lucide-react";
+import { Heart, ListChecks, Menu, Phone, Search, X } from "lucide-react";
 import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
 import seed from "@/data/products.json";
 import type { Product } from "@/types";
@@ -26,13 +26,13 @@ export function Header() {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
-  const { cart, favorites, products, setCartOpen } = useStore();
+  const { selectCount, favorites, products, setSelectOpen } = useStore();
   const all = products.length ? products : (seed as Product[]);
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 160, damping: 28 });
   const open = menu || searchOpen;
   const term = useDebounced(query, 180);
-  const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
+  const cartCount = selectCount;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -106,8 +106,8 @@ export function Header() {
               <Heart size={19} />
               {favorites.length > 0 && <b>{favorites.length}</b>}
             </Link>
-            <button type="button" onClick={() => setCartOpen(true)} aria-label={`Səbət (${cartCount})`} className="nav-icon">
-              <ShoppingBag size={19} />
+            <button type="button" onClick={() => setSelectOpen(true)} aria-label={`Seçilmiş məhsullar (${cartCount})`} className={"nav-icon"}>
+              <ListChecks size={19} />
               {cartCount > 0 && <b>{cartCount}</b>}
             </button>
             <a href={`tel:${site.phone}`} className="header-cta">
@@ -119,8 +119,8 @@ export function Header() {
             <button type="button" onClick={() => setSearchOpen(true)} aria-label="Məhsul axtar">
               <Search size={21} />
             </button>
-            <button type="button" onClick={() => setCartOpen(true)} aria-label={`Səbət (${cartCount})`} className="nav-icon">
-              <ShoppingBag size={21} />
+            <button type="button" onClick={() => setSelectOpen(true)} aria-label={`Seçilmiş məhsullar (${cartCount})`} className={"nav-icon"}>
+              <ListChecks size={21} />
               {cartCount > 0 && <b>{cartCount}</b>}
             </button>
             <button type="button" onClick={() => setMenu(true)} aria-expanded={menu} aria-label="Menyunu aç">

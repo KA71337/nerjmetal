@@ -13,5 +13,3 @@ export type Product = {
   /** Stock flag for the admin panel and storefront badges; absent = in stock. */
   inStock?: boolean;
 };
-
-export type CartItem = { product: Product; quantity: number };

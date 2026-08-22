@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { Product } from "@/types";
 import { priceToText, sanitiseCatalog, slugify } from "@/lib/product-schema";
-import { encodeOrder, orderLink } from "@/lib/order-payload";
+import { encodeSelection, orderLink } from "@/lib/order-payload";
 
 type Draft = {
   id: string; title: string; category: string; price: string; oldPrice: string;
@@ -282,9 +282,14 @@ function ProductForm({
 function ShareLinkDialog({ products, origin, onClose, onToast }: {
   products: Product[]; origin: string; onClose: () => void; onToast: (kind: "ok" | "error", text: string) => void;
 }) {
-  const items = products.map((product) => ({ id: product.id, title: product.title, quantity: 1 }));
+  const items = products.map((product) => ({ id: product.id, quantity: 1 }));
   const link = orderLink(origin || "https://nerjmetal.com", items);
-  const text = ["NERJ METAL — məhsul sorğusu", ...items.map((item, index) => `${index + 1}. ${item.title}`), "", link].join("\n");
+  const text = [
+    "NERJ METAL — məhsul sorğusu",
+    ...products.map((product, index) => `${index + 1}. ${product.title}`),
+    "",
+    link,
+  ].join("\n");
 
   async function copy(value: string) {
     try {
@@ -309,7 +314,7 @@ function ShareLinkDialog({ products, origin, onClose, onToast }: {
         transition={{ duration: 0.32, ease: [0.22, 0.68, 0.16, 1] }}
       >
         <h2 id="adm-share-title">Link yarat</h2>
-        <p>{products.length} məhsul seçilib. Linki açan şəxs şəkilləri və qiymətləri görəcək.</p>
+        <p>{products.length} məhsul seçilib. Link yalnız bu məhsulları ehtiva edir — foto və qiymətlər canlı kataloqdan gəlir.</p>
         <output className="adm-share__link" aria-label="Yaradılan link">{link}</output>
         <div className="adm-confirm__row">
           <button type="button" className="btn" onClick={onClose}>Bağla</button>
